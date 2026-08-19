@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:demo": "vite --mode demo",
     "build": "vite build",
+    "build:demo": "node scripts/generate-demo.mjs && vite build --mode demo",
     "preview": "vite preview --host 0.0.0.0 --port 8050"
   },
   "dependencies": {

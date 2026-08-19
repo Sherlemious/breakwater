@@ -195,6 +195,7 @@ cython_debug/
 dashboard/frontend/node_modules/
 dashboard/frontend/dist/
 dashboard/frontend/.vite/
+dashboard/frontend/public/demo/snapshot.json
 
 # PyPI configuration file
 .pypirc
@@ -233,3 +234,5 @@ plan.md
 .env
 .env.*
 !.env.example
+
+.vercel

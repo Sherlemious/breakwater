@@ -1,0 +1,12 @@
+ingestion
+model
+mitigation
+pipeline
+pcaps
+data
+docs
+dashboard/backend
+dashboard/frontend/node_modules
+**/*.pcap
+**/*.pcapng
+.git

@@ -6,9 +6,8 @@ import {
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import "./styles.css";
+import { req, REFRESH_MS, isStaticDemo, downloadAlertsCsv } from "./demoApi";
 
-const API        = import.meta.env.VITE_API_BASE || "/api";
-const REFRESH_MS = 5000;
 const PAGE_SIZE  = 40;
 const C = {
   pkt:    "#3ea6ff",
@@ -20,26 +19,6 @@ const C = {
   rf:     "#00c8a8",
   pie:    ["#ff3355", "#3ea6ff", "#b47aff", "#00d68f", "#f5c518"],
 };
-
-// ── helpers ──────────────────────────────────────────────────────────────────
-async function req(path, init) {
-  const url = `${API}${path}`;
-  const r = await fetch(url, init);
-  const text = await r.text();
-  if (!r.ok) {
-    let message = text.slice(0, 120) || r.statusText;
-    try {
-      const payload = JSON.parse(text);
-      message = payload.error || payload.message || message;
-    } catch {}
-    throw new Error(`${r.status} ${message} [${path}]`);
-  }
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error(`Bad JSON from ${path} — got: ${text.slice(0, 60)}`);
-  }
-}
 
 function usePolling(loader, deps = []) {
   const [data, setData]       = React.useState(null);
@@ -400,8 +379,8 @@ function PcapInjection({ status, loading }) {
           <datalist id="pcap-files">
             {(status?.available_pcaps || []).map(name => <option key={name} value={name} />)}
           </datalist>
-          <button onClick={inject} disabled={busy || running}>
-            {busy || running ? "Running..." : "Inject"}
+          <button onClick={inject} disabled={busy || running || isStaticDemo}>
+            {busy || running ? "Running..." : isStaticDemo ? "Local only" : "Inject"}
           </button>
         </div>
         <div className="pcap-meta">
@@ -646,8 +625,8 @@ function App() {
           <div className="hero-brand">
             <div className="hero-icon">🛡</div>
             <div>
-              <h1>DDOS <span>SENTINEL</span></h1>
-              <p>Real-time threat detection &amp; automated mitigation</p>
+              <h1>BREAK<span>WATER</span></h1>
+              <p>Hybrid ML + statistical DDoS detector — simulated mitigation</p>
             </div>
           </div>
           <div className="hero-right">
@@ -663,6 +642,12 @@ function App() {
             <span className="clock">{clock}</span>
           </div>
         </header>
+
+        {isStaticDemo && (
+          <div className="demo-banner">
+            Recorded 20-minute pipeline run. Charts, alerts, and iptables strings are from the detector — rules are simulated, not applied. Inject PCAPs locally with Docker Compose.
+          </div>
+        )}
 
         {errors.length > 0 && (
           <div className="error-banner">⚠ {errors[0]}</div>
@@ -847,9 +832,9 @@ function App() {
         <Card
             title="Recent Alerts"
             action={
-              <a className="btn btn--outline" href={`${API}/export-alerts.csv`}>
+              <button className="btn btn--outline" type="button" onClick={() => downloadAlertsCsv()}>
                 Export CSV
-              </a>
+              </button>
             }
           >
             {alerts.loading

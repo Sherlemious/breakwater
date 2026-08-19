@@ -138,6 +138,12 @@ body {
   color: #ffb3c0; border-radius: 10px; padding: 12px 16px;
   font-size: 13px;
 }
+.demo-banner {
+  margin-bottom: 16px;
+  background: var(--brand-glow); border: 1px solid var(--brand);
+  color: var(--ink); border-radius: 10px; padding: 12px 16px;
+  font-size: 13px; line-height: 1.45;
+}
 
 /* ── KPIs ────────────────────────────────────────────── */
 .kpis { display: grid; gap: 14px; grid-template-columns: repeat(4, 1fr); margin-bottom: 18px; }

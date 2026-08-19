@@ -16,7 +16,7 @@ flowchart LR
   sim --> dash
 ```
 
-Built as a GUC Network Security course project. Demo-first: Docker Compose runs the full pipeline, then a React dashboard on `:8050`.
+Built as a GUC Network Security course project. Live demo: [breakwater.sherlemious.com](https://breakwater.sherlemious.com) (recorded 20-minute pipeline run). Docker Compose still runs the full detector locally, then a React dashboard on `:8050`.
 
 ## What it does
 
@@ -68,6 +68,8 @@ docker compose --profile dashboard up --build dashboard
 ```
 
 Open [http://localhost:8050](http://localhost:8050).
+
+The public site at [breakwater.sherlemious.com](https://breakwater.sherlemious.com) is that same dashboard on a recorded snapshot — no PCAPs, no host firewall changes. Mitigation rows stay tagged `simulated; command stored but not executed`. If DNS is still propagating, the Vercel URL is [breakwater-psi.vercel.app](https://breakwater-psi.vercel.app).
 
 Override filenames (paths are *inside* the container, under `/app/input`):
 
