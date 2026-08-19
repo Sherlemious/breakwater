@@ -1,0 +1,7 @@
+# Place CIC-DDoS2019 (or similar) splits here:
+#   benign-train.pcap
+#   attack-train.pcap
+#   benign-test.pcap
+#   attack-test.pcap
+#
+# Files in this directory are gitignored. See the README.

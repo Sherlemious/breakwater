@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DDoS Tool — Architecture</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #060912;
+    color: #e2e8f0;
+    padding: 48px 28px 72px;
+    min-height: 100vh;
+  }
+
+  /* ── Page header ── */
+  .page-header { text-align: center; margin-bottom: 52px; }
+  .page-header h1 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+  }
+  .page-header p { font-size: 0.8rem; color: #475569; letter-spacing: 0.06em; text-transform: uppercase; }
+
+  /* ── Section label ── */
+  .section-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #334155;
+    margin-bottom: 16px;
+  }
+
+  /* ── Dashboard alternatives ── */
+  .alt-section { max-width: 980px; margin: 0 auto 60px; }
+  .alt-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+
+  .alt-card {
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid transparent;
+    position: relative;
+    overflow: hidden;
+  }
+  .alt-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    padding: 1px;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .dash-card  { background: linear-gradient(135deg, #0a1628 0%, #060c18 100%); border-color: #1e3a5f; }
+  .flask-card { background: linear-gradient(135deg, #110a24 0%, #080615 100%); border-color: #2d1b4e; }
+  .panel-card { background: linear-gradient(135deg, #061510 0%, #040c08 100%); border-color: #143d1e; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .dash-card  .badge { background: #0c2a40; color: #38bdf8; border: 1px solid #164e6b; }
+  .flask-card .badge { background: #1a0b32; color: #c084fc; border: 1px solid #3b1d6b; }
+  .panel-card .badge { background: #071e0e; color: #4ade80; border: 1px solid #155724; }
+
+  .alt-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+  .dash-card  h3 { color: #60a5fa; }
+  .flask-card h3 { color: #c084fc; }
+  .panel-card h3 { color: #4ade80; }
+
+  .alt-card p { font-size: 0.75rem; color: #94a3b8; line-height: 1.6; margin-bottom: 12px; }
+
+  .alt-card ul { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+  .alt-card ul li {
+    font-size: 0.73rem;
+    color: #cbd5e1;
+    padding: 5px 10px;
+    border-radius: 6px;
+    background: #ffffff08;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .alt-card ul li::before { content: "→"; font-size: 0.7rem; opacity: 0.5; flex-shrink: 0; }
+
+  /* ── Diagram wrapper ── */
+  .diagram-section { max-width: 980px; margin: 0 auto; }
+  .arch-svg { width: 100%; height: auto; display: block; }
+
+  /* ── Bottom note ── */
+  .rec-note {
+    max-width: 980px;
+    margin: 28px auto 0;
+    background: linear-gradient(135deg, #0f1a0a 0%, #080e06 100%);
+    border: 1px solid #1a3d0f;
+    border-left: 3px solid #4ade80;
+    border-radius: 10px;
+    padding: 16px 22px;
+    font-size: 0.78rem;
+    color: #94a3b8;
+    line-height: 1.75;
+  }
+  .rec-note strong { color: #e2e8f0; }
+  code {
+    background: #0d1117;
+    border: 1px solid #1e2a3d;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 0.73rem;
+    color: #7dd3fc;
+    font-family: 'Consolas', 'Fira Code', monospace;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>DDoS Mitigation Tool — System Architecture</h1>
+  <p>Data flow &nbsp;·&nbsp; operating modes &nbsp;·&nbsp; state persistence</p>
+</div>
+
+<!-- ── Dashboard alternatives ── -->
+<div class="alt-section">
+  <div class="section-label">Dashboard framework — options (not Streamlit)</div>
+  <div class="alt-grid">
+
+    <div class="alt-card dash-card">
+      <div class="badge">★ Recommended</div>
+      <h3>Plotly Dash</h3>
+      <p>Pure Python, reactive callbacks, already have Plotly installed. The cleanest path from data to interactive dashboard.</p>
+      <ul>
+        <li><code>dcc.RangeSlider</code> = time slider (D.2) in one line</li>
+        <li>Callbacks slice the in-memory DataFrame directly</li>
+        <li><code>dash_table.DataTable</code> for whitelist/blacklist UI</li>
+        <li>Single Docker service · <code>pip install dash</code></li>
+      </ul>
+    </div>
+
+    <div class="alt-card flask-card">
+      <div class="badge">More Control</div>
+      <h3>Flask + Plotly.js</h3>
+      <p>Python Flask backend serving a single HTML page. Charts rendered client-side via JSON from API endpoints.</p>
+      <ul>
+        <li>Full HTML/CSS layout control</li>
+        <li>Custom JS range slider, no framework magic</li>
+        <li>REST endpoints for whitelist/blacklist edits</li>
+        <li>Lightest possible Docker image</li>
+      </ul>
+    </div>
+
+    <div class="alt-card panel-card">
+      <div class="badge">Flexible</div>
+      <h3>Panel (HoloViz)</h3>
+      <p>Closest to Streamlit in feel but with proper tabbed layouts and explicit positioning. Works with Plotly and Matplotlib.</p>
+      <ul>
+        <li><code>pn.widgets.RangeSlider</code> built in</li>
+        <li>param watchers handle reactive updates cleanly</li>
+        <li>Tabbed panels much easier than Streamlit</li>
+        <li><code>pip install panel</code> — no extra deps</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Architecture SVG ── -->
+<div class="diagram-section">
+  <div class="section-label" style="text-align:center">Architecture overview</div>
+
+  <svg class="arch-svg" viewBox="0 0 660 730" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+
+      <!-- Dot grid background -->
+      <pattern id="dots" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
+        <circle cx="1" cy="1" r="0.8" fill="#1e2535"/>
+      </pattern>
+
+      <!-- Box gradient fills -->
+      <linearGradient id="g-pcap" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="#131b2e"/>
+        <stop offset="100%" stop-color="#0a1020"/>
+      </linearGradient>
+      <linearGradient id="g-a" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="#0d1f3c"/>
+        <stop offset="100%" stop-color="#070f1e"/>
+      </linearGradient>
+      <linearGradient id="g-b" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="#130e2a"/>
+        <stop offset="100%" stop-color="#080615"/>
+      </linearGradient>
+      <linearGradient id="g-c" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="#071a0d"/>
+        <stop offset="100%" stop-color="#030d07"/>
+      </linearGradient>
+      <linearGradient id="g-d" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="#1a0e04"/>
+        <stop offset="100%" stop-color="#0c0602"/>
+      </linearGradient>
+      <linearGradient id="g-ss" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="#16110a"/>
+        <stop offset="100%" stop-color="#0b0904"/>
+      </linearGradient>
+      <linearGradient id="g-out" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="#111827"/>
+        <stop offset="100%" stop-color="#0a0f1a"/>
+      </linearGradient>
+
+      <!-- Header bar gradients -->
+      <linearGradient id="gh-a" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%"   stop-color="#1e3a5f"/>
+        <stop offset="100%" stop-color="#0f2040"/>
+      </linearGradient>
+      <linearGradient id="gh-b" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%"   stop-color="#2d1b4e"/>
+        <stop offset="100%" stop-color="#180e2a"/>
+      </linearGradient>
+      <linearGradient id="gh-c" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%"   stop-color="#14532d"/>
+        <stop offset="100%" stop-color="#0a2d18"/>
+      </linearGradient>
+      <linearGradient id="gh-d" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%"   stop-color="#431407"/>
+        <stop offset="100%" stop-color="#250a03"/>
+      </linearGradient>
+      <linearGradient id="gh-ss" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%"   stop-color="#1c1400"/>
+        <stop offset="100%" stop-color="#120d00"/>
+      </linearGradient>
+
+      <!-- Glow filters -->
+      <filter id="glow-blue" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
+        <feColorMatrix in="blur" type="matrix"
+          values="0 0 0 0 0.13
+                  0 0 0 0 0.38
+                  0 0 0 0 0.87
+                  0 0 0 0.55 0" result="colored"/>
+        <feMerge><feMergeNode in="colored"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <filter id="glow-purple" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
+        <feColorMatrix in="blur" type="matrix"
+          values="0 0 0 0 0.35
+                  0 0 0 0 0.15
+                  0 0 0 0 0.65
+                  0 0 0 0.55 0" result="colored"/>
+        <feMerge><feMergeNode in="colored"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <filter id="glow-green" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
+        <feColorMatrix in="blur" type="matrix"
+          values="0 0 0 0 0.05
+                  0 0 0 0 0.55
+                  0 0 0 0 0.18
+                  0 0 0 0.55 0" result="colored"/>
+        <feMerge><feMergeNode in="colored"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <filter id="glow-orange" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
+        <feColorMatrix in="blur" type="matrix"
+          values="0 0 0 0 0.76
+                  0 0 0 0 0.28
+                  0 0 0 0 0.03
+                  0 0 0 0.55 0" result="colored"/>
+        <feMerge><feMergeNode in="colored"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <filter id="glow-amber" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
+        <feColorMatrix in="blur" type="matrix"
+          values="0 0 0 0 0.76
+                  0 0 0 0 0.50
+                  0 0 0 0 0.03
+                  0 0 0 0.55 0" result="colored"/>
+        <feMerge><feMergeNode in="colored"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+
+      <!-- Arrow markers -->
+      <marker id="m-gray"   viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1.5 L8,5 L0,8.5z" fill="#475569"/></marker>
+      <marker id="m-blue"   viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1.5 L8,5 L0,8.5z" fill="#60a5fa"/></marker>
+      <marker id="m-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1.5 L8,5 L0,8.5z" fill="#a78bfa"/></marker>
+      <marker id="m-green"  viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1.5 L8,5 L0,8.5z" fill="#4ade80"/></marker>
+      <marker id="m-orange" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1.5 L8,5 L0,8.5z" fill="#fb923c"/></marker>
+      <marker id="m-amber"  viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1.5 L8,5 L0,8.5z" fill="#fbbf24"/></marker>
+      <marker id="m-red"    viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1.5 L8,5 L0,8.5z" fill="#f87171"/></marker>
+    </defs>
+
+    <!-- Background -->
+    <rect width="660" height="730" fill="#060912"/>
+    <rect width="660" height="730" fill="url(#dots)"/>
+
+    <!-- ══════════════════════════════════════════
+         MODE BADGES
+    ══════════════════════════════════════════ -->
+    <rect x="14"  y="14" width="136" height="28" rx="6" fill="#0c1829" stroke="#1d4ed8" stroke-width="1.2" filter="url(#glow-blue)"/>
+    <text x="82"  y="33" text-anchor="middle" fill="#93c5fd" font-size="10" font-weight="700" font-family="'Segoe UI',sans-serif">📖  LEARNING MODE</text>
+
+    <rect x="160" y="14" width="150" height="28" rx="6" fill="#13082a" stroke="#6d28d9" stroke-width="1.2" filter="url(#glow-purple)"/>
+    <text x="235" y="33" text-anchor="middle" fill="#c4b5fd" font-size="10" font-weight="700" font-family="'Segoe UI',sans-serif">🔍  DETECTION MODE</text>
+
+    <!-- ══════════════════════════════════════════
+         PCAP INPUT
+    ══════════════════════════════════════════ -->
+    <rect x="68" y="56" width="186" height="44" rx="8" fill="url(#g-pcap)" stroke="#2d3f5e" stroke-width="1.5" stroke-dasharray="6 3"/>
+    <text x="161" y="75"  text-anchor="middle" fill="#94a3b8" font-size="11"   font-weight="700" font-family="'Segoe UI',sans-serif">PCAP FILE INPUT</text>
+    <text x="161" y="90"  text-anchor="middle" fill="#475569" font-size="8.5"  font-family="'Segoe UI',sans-serif">CLI flag  ·  dashboard upload</text>
+
+    <!-- PCAP → A -->
+    <line x1="161" y1="100" x2="161" y2="110" stroke="#475569" stroke-width="2" marker-end="url(#m-gray)"/>
+
+    <!-- ══════════════════════════════════════════
+         A — INGESTION
+    ══════════════════════════════════════════ -->
+    <!-- Glow -->
+    <rect x="16" y="112" width="300" height="122" rx="10" fill="none" stroke="#3b82f6" stroke-width="2.5" filter="url(#glow-blue)" opacity="0.7"/>
+    <!-- Box -->
+    <rect x="16" y="112" width="300" height="122" rx="10" fill="url(#g-a)" stroke="#3b82f6" stroke-width="1.5"/>
+    <!-- Header -->
+    <rect x="16" y="112" width="300" height="28" rx="10" fill="url(#gh-a)"/>
+    <rect x="16" y="128" width="300" height="12"          fill="url(#gh-a)"/>
+    <text x="166" y="131" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="700" font-family="'Segoe UI',sans-serif">A — Ingestion &amp; Feature Extraction</text>
+
+    <!-- Learn row -->
+    <rect x="24" y="148" width="52" height="16" rx="4" fill="#0c2a40" stroke="#1d4ed8" stroke-width="1"/>
+    <text x="50"  y="160" text-anchor="middle" fill="#60a5fa" font-size="8.5" font-weight="700" font-family="'Segoe UI',sans-serif">LEARN</text>
+    <text x="170" y="160" text-anchor="middle" fill="#bfdbfe" font-size="9" font-family="'Segoe UI',sans-serif">parser → extractor → baseline builder → baseline.json</text>
+
+    <!-- Divider -->
+    <line x1="24" y1="170" x2="308" y2="170" stroke="#1e3a5f" stroke-width="1"/>
+
+    <!-- Detect row -->
+    <rect x="24" y="174" width="52" height="16" rx="4" fill="#1a0b32" stroke="#6d28d9" stroke-width="1"/>
+    <text x="50"  y="186" text-anchor="middle" fill="#a78bfa" font-size="8.5" font-weight="700" font-family="'Segoe UI',sans-serif">DETECT</text>
+    <text x="170" y="186" text-anchor="middle" fill="#bfdbfe" font-size="9" font-family="'Segoe UI',sans-serif">parser → extractor → window aggregator → all_windows.parquet</text>
+
+    <!-- Divider -->
+    <line x1="24" y1="196" x2="308" y2="196" stroke="#1e3a5f" stroke-width="1"/>
+
+    <text x="166" y="211" text-anchor="middle" fill="#7dd3fc" font-size="8.5" font-family="'Segoe UI',sans-serif">Scapy · processes entire PCAP in one pass · 1 s rolling windows</text>
+    <text x="166" y="225" text-anchor="middle" fill="#7dd3fc" font-size="8.5" font-family="'Segoe UI',sans-serif">features: pkt/s · bytes/s · unique src IPs · proto dist · port entropy</text>
+
+    <!-- A → B -->
+    <line x1="161" y1="234" x2="161" y2="248" stroke="#60a5fa" stroke-width="2" marker-end="url(#m-blue)"/>
+
+    <!-- ══════════════════════════════════════════
+         B — DETECTION
+    ══════════════════════════════════════════ -->
+    <rect x="16" y="250" width="300" height="94" rx="10" fill="none" stroke="#8b5cf6" stroke-width="2.5" filter="url(#glow-purple)" opacity="0.7"/>
+    <rect x="16" y="250" width="300" height="94" rx="10" fill="url(#g-b)" stroke="#8b5cf6" stroke-width="1.5"/>
+    <rect x="16" y="250" width="300" height="28" rx="10" fill="url(#gh-b)"/>
+    <rect x="16" y="266" width="300" height="12"          fill="url(#gh-b)"/>
+    <text x="166" y="269" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="700" font-family="'Segoe UI',sans-serif">B — Detection &amp; Algorithms</text>
+
+    <text x="166" y="296" text-anchor="middle" fill="#ddd6fe" font-size="9" font-family="'Segoe UI',sans-serif">Loads baseline.json + all_windows.parquet from State Store at startup</text>
+    <text x="166" y="312" text-anchor="middle" fill="#ddd6fe" font-size="9" font-family="'Segoe UI',sans-serif">Computes anomaly score (0–1) per window · z-score / IQR per feature</text>
+    <text x="166" y="328" text-anchor="middle" fill="#ddd6fe" font-size="9" font-family="'Segoe UI',sans-serif">De-duplicates alerts · logs justification: metric, value, threshold, ts</text>
+
+    <!-- B → C -->
+    <line x1="161" y1="344" x2="161" y2="358" stroke="#a78bfa" stroke-width="2" marker-end="url(#m-purple)"/>
+
+    <!-- ══════════════════════════════════════════
+         C — MITIGATION
+    ══════════════════════════════════════════ -->
+    <rect x="16" y="360" width="300" height="94" rx="10" fill="none" stroke="#22c55e" stroke-width="2.5" filter="url(#glow-green)" opacity="0.7"/>
+    <rect x="16" y="360" width="300" height="94" rx="10" fill="url(#g-c)" stroke="#22c55e" stroke-width="1.5"/>
+    <rect x="16" y="360" width="300" height="28" rx="10" fill="url(#gh-c)"/>
+    <rect x="16" y="376" width="300" height="12"          fill="url(#gh-c)"/>
+    <text x="166" y="379" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="700" font-family="'Segoe UI',sans-serif">C — Mitigation &amp; Firewall</text>
+
+    <text x="166" y="406" text-anchor="middle" fill="#bbf7d0" font-size="9" font-family="'Segoe UI',sans-serif">Reads anomaly_scores.parquet · checks whitelist.json before every action</text>
+    <text x="166" y="422" text-anchor="middle" fill="#bbf7d0" font-size="9" font-family="'Segoe UI',sans-serif">Gradual escalation: rate-limit → block port → block IP (confidence-gated)</text>
+    <text x="166" y="438" text-anchor="middle" fill="#bbf7d0" font-size="9" font-family="'Segoe UI',sans-serif">Generates iptables rules · writes rules_log + alerts_log to State Store</text>
+
+    <!-- C → D -->
+    <line x1="161" y1="454" x2="161" y2="468" stroke="#4ade80" stroke-width="2" marker-end="url(#m-green)"/>
+
+    <!-- ══════════════════════════════════════════
+         D — DASHBOARD
+    ══════════════════════════════════════════ -->
+    <rect x="16" y="470" width="300" height="142" rx="10" fill="none" stroke="#f97316" stroke-width="2.5" filter="url(#glow-orange)" opacity="0.7"/>
+    <rect x="16" y="470" width="300" height="142" rx="10" fill="url(#g-d)" stroke="#f97316" stroke-width="1.5"/>
+    <rect x="16" y="470" width="300" height="28" rx="10" fill="url(#gh-d)"/>
+    <rect x="16" y="486" width="300" height="12"          fill="url(#gh-d)"/>
+    <text x="166" y="489" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="700" font-family="'Segoe UI',sans-serif">D — Dashboard &amp; Alerts</text>
+
+    <!-- Key insight callout -->
+    <rect x="26" y="506" width="280" height="22" rx="6" fill="#120800" stroke="#f59e0b" stroke-width="1.2"/>
+    <text x="166" y="521" text-anchor="middle" fill="#fcd34d" font-size="9" font-weight="700" font-family="'Segoe UI',sans-serif">⚡ Time slider = df.between(t0, t1) — NO back-channel to A or B</text>
+
+    <text x="166" y="545" text-anchor="middle" fill="#fed7aa" font-size="9" font-family="'Segoe UI',sans-serif">Loads all files into memory at startup · 4+ interactive graphs · RangeSlider</text>
+    <text x="166" y="560" text-anchor="middle" fill="#fed7aa" font-size="9" font-family="'Segoe UI',sans-serif">Anomaly score graph + threshold line · alert drill-down panel</text>
+    <text x="166" y="575" text-anchor="middle" fill="#fed7aa" font-size="9" font-family="'Segoe UI',sans-serif">Whitelist / blacklist UI — the only component that writes to State Store</text>
+    <text x="166" y="590" text-anchor="middle" fill="#fb923c" font-size="8.5" font-family="'Segoe UI',sans-serif">Notifications: email / WhatsApp · cool-down ~2 min · first alert immediate</text>
+
+    <!-- D → output -->
+    <line x1="161" y1="612" x2="161" y2="626" stroke="#fb923c" stroke-width="2" marker-end="url(#m-orange)"/>
+
+    <!-- OUTPUT -->
+    <rect x="68" y="628" width="186" height="44" rx="8" fill="url(#g-out)" stroke="#2d3f5e" stroke-width="1.5" stroke-dasharray="6 3"/>
+    <text x="161" y="648" text-anchor="middle" fill="#94a3b8" font-size="10.5" font-weight="700" font-family="'Segoe UI',sans-serif">TA DEMO OUTPUT</text>
+    <text x="161" y="663" text-anchor="middle" fill="#475569" font-size="8.5" font-family="'Segoe UI',sans-serif">live dashboard · firewall rules · notification sent</text>
+
+
+    <!-- ══════════════════════════════════════════
+         STATE STORE  (right column x=392–638)
+    ══════════════════════════════════════════ -->
+    <rect x="392" y="112" width="246" height="500" rx="10" fill="none" stroke="#d97706" stroke-width="2.5" filter="url(#glow-amber)" opacity="0.6"/>
+    <rect x="392" y="112" width="246" height="500" rx="10" fill="url(#g-ss)" stroke="#d97706" stroke-width="1.5" stroke-dasharray="8 4"/>
+
+    <!-- SS Header -->
+    <rect x="392" y="112" width="246" height="28" rx="10" fill="url(#gh-ss)"/>
+    <rect x="392" y="128" width="246" height="12"          fill="url(#gh-ss)"/>
+    <text x="515" y="131" text-anchor="middle" fill="#ffffff"  font-size="12" font-weight="700" font-family="'Segoe UI',sans-serif">STATE STORE</text>
+
+    <text x="515" y="152" text-anchor="middle" fill="#92400e" font-size="8.5" font-family="'Segoe UI',sans-serif">data/  folder · JSON + Parquet on disk</text>
+    <text x="515" y="165" text-anchor="middle" fill="#78350f" font-size="8"   font-family="'Segoe UI',sans-serif">mounted as Docker volume — survives container restarts</text>
+
+    <!-- ── File group 1: A writes, B reads (aligned near arrow y=156) ── -->
+    <text x="402" y="187" fill="#52400a" font-size="8" font-family="'Segoe UI',sans-serif" font-weight="600">WRITTEN BY A</text>
+    <rect x="400" y="192" width="230" height="20" rx="5" fill="#0f0c00" stroke="#44300a" stroke-width="1"/>
+    <text x="515" y="206" text-anchor="middle" fill="#fde68a" font-size="9" font-family="'Consolas','Fira Code',monospace">baseline.json</text>
+    <rect x="400" y="216" width="230" height="20" rx="5" fill="#0f0c00" stroke="#44300a" stroke-width="1"/>
+    <text x="515" y="230" text-anchor="middle" fill="#fde68a" font-size="9" font-family="'Consolas','Fira Code',monospace">all_windows.parquet</text>
+
+    <!-- ── File group 2: B writes (aligned near arrow y=298) ── -->
+    <line x1="400" y1="248" x2="630" y2="248" stroke="#1c1400" stroke-width="1"/>
+    <text x="402" y="263" fill="#52400a" font-size="8" font-family="'Segoe UI',sans-serif" font-weight="600">WRITTEN BY B</text>
+    <rect x="400" y="268" width="230" height="20" rx="5" fill="#0f0c00" stroke="#44300a" stroke-width="1"/>
+    <text x="515" y="282" text-anchor="middle" fill="#fde68a" font-size="9" font-family="'Consolas','Fira Code',monospace">anomaly_scores.parquet</text>
+
+    <!-- ── File group 3: C writes (aligned near arrow y=406) ── -->
+    <line x1="400" y1="302" x2="630" y2="302" stroke="#1c1400" stroke-width="1"/>
+    <text x="402" y="317" fill="#52400a" font-size="8" font-family="'Segoe UI',sans-serif" font-weight="600">WRITTEN BY C</text>
+    <rect x="400" y="322" width="230" height="20" rx="5" fill="#0f0c00" stroke="#44300a" stroke-width="1"/>
+    <text x="515" y="336" text-anchor="middle" fill="#fde68a" font-size="9" font-family="'Consolas','Fira Code',monospace">rules_log.json</text>
+    <rect x="400" y="346" width="230" height="20" rx="5" fill="#0f0c00" stroke="#44300a" stroke-width="1"/>
+    <text x="515" y="360" text-anchor="middle" fill="#fde68a" font-size="9" font-family="'Consolas','Fira Code',monospace">alerts_log.json</text>
+
+    <!-- ── File group 4: D writes (aligned near arrow y=530) ── -->
+    <line x1="400" y1="378" x2="630" y2="378" stroke="#1c1400" stroke-width="1"/>
+    <text x="402" y="393" fill="#52400a" font-size="8" font-family="'Segoe UI',sans-serif" font-weight="600">WRITTEN BY D (UI ONLY)</text>
+    <rect x="400" y="398" width="230" height="20" rx="5" fill="#0f0c00" stroke="#44300a" stroke-width="1"/>
+    <text x="515" y="412" text-anchor="middle" fill="#fde68a" font-size="9" font-family="'Consolas','Fira Code',monospace">whitelist.json</text>
+    <rect x="400" y="422" width="230" height="20" rx="5" fill="#0f0c00" stroke="#44300a" stroke-width="1"/>
+    <text x="515" y="436" text-anchor="middle" fill="#fde68a" font-size="9" font-family="'Consolas','Fira Code',monospace">blacklist.json</text>
+
+    <!-- Note inside SS -->
+    <line x1="400" y1="454" x2="630" y2="454" stroke="#1c1400" stroke-width="1"/>
+    <text x="515" y="474" text-anchor="middle" fill="#78350f" font-size="8.5" font-family="'Segoe UI',sans-serif">C polls whitelist.json before</text>
+    <text x="515" y="489" text-anchor="middle" fill="#78350f" font-size="8.5" font-family="'Segoe UI',sans-serif">every mitigation decision</text>
+    <text x="515" y="510" text-anchor="middle" fill="#52400a" font-size="8"   font-family="'Segoe UI',sans-serif">D loads all files into memory</text>
+    <text x="515" y="524" text-anchor="middle" fill="#52400a" font-size="8"   font-family="'Segoe UI',sans-serif">at startup — no re-reads on slider</text>
+    <text x="515" y="539" text-anchor="middle" fill="#44300a" font-size="8"   font-family="'Segoe UI',sans-serif">drag. Slider is a pandas filter.</text>
+    <text x="515" y="560" text-anchor="middle" fill="#3a2808" font-size="7.5" font-family="'Segoe UI',sans-serif">volume: ./data:/app/data</text>
+
+
+    <!-- ══════════════════════════════════════════
+         HORIZONTAL ARROWS — left col ↔ State Store
+         All horizontal, no crossings, distinct y.
+    ══════════════════════════════════════════ -->
+
+    <!-- Helper: arrow label pill function (drawn as rect+text inline) -->
+
+    <!-- 1. A → SS  y=156  save baseline/windows -->
+    <line x1="316" y1="156" x2="392" y2="156" stroke="#60a5fa" stroke-width="2" marker-end="url(#m-amber)"/>
+    <rect x="326" y="145" width="56" height="14" rx="4" fill="#060912"/>
+    <text x="354" y="156" text-anchor="middle" fill="#60a5fa" font-size="8" font-weight="600" font-family="'Segoe UI',sans-serif">save  →</text>
+
+    <!-- 2. SS → B  y=274  load baseline + windows -->
+    <line x1="392" y1="274" x2="316" y2="274" stroke="#a78bfa" stroke-width="2" marker-end="url(#m-purple)"/>
+    <rect x="324" y="263" width="56" height="14" rx="4" fill="#060912"/>
+    <text x="354" y="274" text-anchor="middle" fill="#a78bfa" font-size="8" font-weight="600" font-family="'Segoe UI',sans-serif">← load</text>
+
+    <!-- 3. B → SS  y=296  save anomaly scores -->
+    <line x1="316" y1="296" x2="392" y2="296" stroke="#a78bfa" stroke-width="2" marker-end="url(#m-amber)"/>
+    <rect x="326" y="285" width="56" height="14" rx="4" fill="#060912"/>
+    <text x="354" y="296" text-anchor="middle" fill="#a78bfa" font-size="8" font-weight="600" font-family="'Segoe UI',sans-serif">save  →</text>
+
+    <!-- 4. SS → C  y=384  load anomaly scores -->
+    <line x1="392" y1="384" x2="316" y2="384" stroke="#4ade80" stroke-width="2" marker-end="url(#m-green)"/>
+    <rect x="324" y="373" width="56" height="14" rx="4" fill="#060912"/>
+    <text x="354" y="384" text-anchor="middle" fill="#4ade80" font-size="8" font-weight="600" font-family="'Segoe UI',sans-serif">← load</text>
+
+    <!-- 5. C → SS  y=406  save rules + alerts -->
+    <line x1="316" y1="406" x2="392" y2="406" stroke="#4ade80" stroke-width="2" marker-end="url(#m-amber)"/>
+    <rect x="326" y="395" width="56" height="14" rx="4" fill="#060912"/>
+    <text x="354" y="406" text-anchor="middle" fill="#4ade80" font-size="8" font-weight="600" font-family="'Segoe UI',sans-serif">save  →</text>
+
+    <!-- 6. SS → D  y=500  read all at startup -->
+    <line x1="392" y1="500" x2="316" y2="500" stroke="#fb923c" stroke-width="2" marker-end="url(#m-orange)"/>
+    <rect x="321" y="489" width="73" height="14" rx="4" fill="#060912"/>
+    <text x="354" y="500" text-anchor="middle" fill="#fb923c" font-size="8" font-weight="600" font-family="'Segoe UI',sans-serif">← read all</text>
+
+    <!-- 7. D → SS  y=530  write WL/BL only (dashed, red) -->
+    <line x1="316" y1="530" x2="392" y2="530" stroke="#f87171" stroke-width="2" stroke-dasharray="5 3" marker-end="url(#m-red)"/>
+    <rect x="318" y="519" width="74" height="14" rx="4" fill="#060912"/>
+    <text x="354" y="530" text-anchor="middle" fill="#f87171" font-size="8" font-weight="600" font-family="'Segoe UI',sans-serif">WL/BL  →</text>
+
+  </svg>
+</div>
+
+<!-- ── Bottom note ── -->
+<div class="rec-note">
+  <strong>Key design decisions:</strong>
+  A processes the full PCAP in one pass and writes <code>all_windows.parquet</code> to disk.
+  The dashboard time slider never talks back to A — it calls <code>df[df.ts.between(t0, t1)]</code> on the DataFrame loaded into memory at startup.
+  D is read-only from the State Store except for <code>whitelist.json</code> / <code>blacklist.json</code>, which C polls before every mitigation decision.
+  All state lives in a Docker-mounted <code>./data</code> volume so nothing is lost on container restart.
+  <br><br>
+  <strong>Dashboard pick:</strong>
+  Plotly Dash — <code>dcc.RangeSlider</code> covers D.2, <code>dash_table.DataTable</code> covers D.4, and reactive callbacks update all charts on every slider drag without any custom JS.
+</div>
+
+</body>
+</html>

@@ -1,0 +1,124 @@
+---
+services:
+  db:
+    image: alpine:3.20
+    command: >
+      sh -c "apk add --no-cache sqlite &&
+      mkdir -p /data &&
+      sqlite3 /data/ddos_tool.db 'PRAGMA journal_mode=WAL;' &&
+      tail -f /dev/null"
+    volumes:
+      - db-data:/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "sqlite3 /data/ddos_tool.db 'PRAGMA quick_check;' | grep -q ok",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  ingestion:
+    build:
+      context: .
+      dockerfile: ingestion/Dockerfile
+    image: ddos-tool-ingestion:local
+    environment:
+      SQLITE_DB_PATH: /app/db/ddos_tool.db
+    volumes:
+      - state-store:/app/data
+      - db-data:/app/db
+      - ./pcaps:/app/input:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles: ["manual"]
+
+  model:
+    build:
+      context: .
+      dockerfile: model/Dockerfile
+    image: ddos-tool-model:local
+    environment:
+      SQLITE_DB_PATH: /app/db/ddos_tool.db
+    volumes:
+      - state-store:/app/data
+      - db-data:/app/db
+    depends_on:
+      db:
+        condition: service_healthy
+      ingestion:
+        condition: service_started
+    profiles: ["manual"]
+
+  mitigation:
+    build:
+      context: .
+      dockerfile: mitigation/Dockerfile
+    image: ddos-tool-mitigation:local
+    cap_add:
+      - NET_ADMIN
+    environment:
+      SQLITE_DB_PATH: /app/db/ddos_tool.db
+    volumes:
+      - state-store:/app/data
+      - db-data:/app/db
+    depends_on:
+      db:
+        condition: service_healthy
+      model:
+        condition: service_started
+    profiles: ["manual"]
+
+  pipeline:
+    build:
+      context: .
+      dockerfile: pipeline/Dockerfile
+    image: ddos-tool-pipeline:local
+    environment:
+      SQLITE_DB_PATH: /app/db/ddos_tool.db
+      MODEL_ARTIFACT_DIR: /app/data
+      TRAIN_BENIGN_PCAP: ${TRAIN_BENIGN_PCAP:-/app/input/benign-train.pcap}
+      TRAIN_ATTACK_PCAP: ${TRAIN_ATTACK_PCAP:-/app/input/attack-train.pcap}
+      TEST_BENIGN_PCAP: ${TEST_BENIGN_PCAP:-/app/input/benign-test.pcap}
+      TEST_ATTACK_PCAP: ${TEST_ATTACK_PCAP:-/app/input/attack-test.pcap}
+      PIPELINE_RESET_DB: ${PIPELINE_RESET_DB:-1}
+      PIPELINE_WINDOW_SIZE: ${PIPELINE_WINDOW_SIZE:-1.0}
+      RUN_MITIGATION: ${RUN_MITIGATION:-1}
+      MITIGATION_EVENT_LIMIT: ${MITIGATION_EVENT_LIMIT:-200}
+    volumes:
+      - state-store:/app/data
+      - db-data:/app/db
+      - ./pcaps:/app/input:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles: ["pipeline"]
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: dashboard/Dockerfile
+    image: ddos-tool-dashboard:local
+    environment:
+      PYTHONUNBUFFERED: "1"
+      BACKEND_PORT: 8050
+      SQLITE_DB_PATH: /app/db/ddos_tool.db
+      PCAP_INPUT_DIR: /app/input
+      PCAP_INJECTION_DEFAULT: ${PCAP_INJECTION_DEFAULT:-attack-test.pcap}
+    ports:
+      - "${DASH_PORT:-8050}:8050"
+    volumes:
+      - state-store:/app/data
+      - db-data:/app/db
+      - ./pcaps:/app/input:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles: ["dashboard"]
+
+volumes:
+  db-data:
+  state-store:
