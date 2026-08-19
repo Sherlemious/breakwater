@@ -16,7 +16,14 @@ flowchart LR
   sim --> dash
 ```
 
-Built as a GUC Network Security course project. Live demo: [breakwater.sherlemious.com](https://breakwater.sherlemious.com) (recorded 20-minute pipeline run). Docker Compose still runs the full detector locally, then a React dashboard on `:8050`.
+Built as a GUC Network Security course project by:
+
+- [Abdelrahman Mohammed](https://github.com/Sherlemious)
+- [Youssef Abdelaziz](https://github.com/yussefahmed)
+- [Omar Yasser Abdelhalim](https://github.com/Omar-Goba)
+- [Basant Abdalhamed](https://github.com/basantabdalhamed)
+
+Live demo: [breakwater.sherlemious.com](https://breakwater.sherlemious.com) (recorded 20-minute pipeline run). Docker Compose still runs the full detector locally, then a React dashboard on `:8050`.
 
 ## What it does
 

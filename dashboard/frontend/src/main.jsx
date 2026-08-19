@@ -10,15 +10,23 @@ import { req, REFRESH_MS, isStaticDemo, downloadAlertsCsv } from "./demoApi";
 
 const PAGE_SIZE  = 40;
 const C = {
-  pkt:    "#3ea6ff",
-  bytes:  "#ff8c00",
-  tcp:    "#3ea6ff",
-  udp:    "#f5c518",
-  icmp:   "#00d68f",
-  score:  "#ff3355",
-  rf:     "#00c8a8",
-  pie:    ["#ff3355", "#3ea6ff", "#b47aff", "#00d68f", "#f5c518"],
+  pkt:    "#5eb8d6",
+  bytes:  "#e08a3c",
+  tcp:    "#5eb8d6",
+  udp:    "#e6c15a",
+  icmp:   "#4ad4a0",
+  score:  "#e85d4c",
+  rf:     "#3dceb0",
+  pie:    ["#e85d4c", "#5eb8d6", "#8fb3c9", "#4ad4a0", "#e6c15a"],
 };
+
+const GITHUB_REPO = "https://github.com/Sherlemious/breakwater";
+const CREW = [
+  { name: "Abdelrahman Mohammed", handle: "Sherlemious" },
+  { name: "Youssef Abdelaziz", handle: "yussefahmed" },
+  { name: "Omar Yasser Abdelhalim", handle: "Omar-Goba" },
+  { name: "Basant Abdalhamed", handle: "basantabdalhamed" },
+];
 
 function usePolling(loader, deps = []) {
   const [data, setData]       = React.useState(null);
@@ -624,14 +632,21 @@ function App() {
         <header className="hero">
           <div className="hero-brand">
             <div className="hero-icon">
-              <img src="/favicon.svg" alt="" width="28" height="28" />
+              <img src="/favicon.svg" alt="" width="48" height="48" />
             </div>
             <div>
+              <div className="hero-kicker">Harbor watch · simulated mitigation</div>
               <h1>BREAK<span>WATER</span></h1>
-              <p>Hybrid ML + statistical DDoS detector — simulated mitigation</p>
+              <p>Hybrid ML + statistical DDoS detector. Rules are stored, never applied.</p>
             </div>
           </div>
           <div className="hero-right">
+            <a className="gh-link" href={GITHUB_REPO} target="_blank" rel="noreferrer">
+              <svg viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.65 7.65 0 0 1 8 4.77c.68.003 1.36.092 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
+              </svg>
+              GitHub
+            </a>
             {criticalCount > 0
               ? <div className="status-chip status-chip--critical">
                   <PulsingDot color="red" />
@@ -639,7 +654,7 @@ function App() {
                 </div>
               : <div className="status-chip">
                   <PulsingDot color="green" />
-                  System normal
+                  Channel calm
                 </div>}
             <span className="clock">{clock}</span>
           </div>
@@ -733,9 +748,9 @@ function App() {
 
         {/* ── Dataset 1: Detection ── */}
         <SectionLabel
-          icon="🔍"
-          title="Dataset 1 — Model Detection Output"
-          subtitle="Anomaly scores and RF attack probabilities computed by the detection model against the traffic baseline"
+          icon="01"
+          title="Model detection output"
+          subtitle="Anomaly scores and RF attack probabilities against the traffic baseline"
         />
         <div className="grid two">
           <Card
@@ -815,9 +830,9 @@ function App() {
 
         {/* ── Dataset 2: Mitigation Actions ── */}
         <SectionLabel
-          icon="🛡"
-          title="Dataset 2 — Mitigation Response Layer"
-          subtitle="Actions automatically executed by the mitigation engine at each flagged timestamp — rate limiting, port blocks, and IP drops"
+          icon="02"
+          title="Mitigation response"
+          subtitle="Simulated rate limits, port blocks, and IP drops — commands stored, not executed"
         />
         <Card title="Mitigation Actions Timeline">
           <MitigationTimeline
@@ -921,6 +936,25 @@ function App() {
             </ul>
           </Card>
         </div>
+
+        <footer className="station-foot">
+          <div>
+            <div className="foot-kicker">Watch crew</div>
+            <ul className="crew">
+              {CREW.map((person) => (
+                <li key={person.handle}>
+                  <a href={`https://github.com/${person.handle}`} target="_blank" rel="noreferrer">
+                    <span className="crew-name">{person.name}</span>
+                    <span className="crew-handle">@{person.handle}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <a className="foot-source" href={GITHUB_REPO} target="_blank" rel="noreferrer">
+            Source · github.com/Sherlemious/breakwater
+          </a>
+        </footer>
 
       </main>
     </>
