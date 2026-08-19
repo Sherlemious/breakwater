@@ -623,7 +623,9 @@ function App() {
         {/* ── Header ── */}
         <header className="hero">
           <div className="hero-brand">
-            <div className="hero-icon">🛡</div>
+            <div className="hero-icon">
+              <img src="/favicon.svg" alt="" width="28" height="28" />
+            </div>
             <div>
               <h1>BREAK<span>WATER</span></h1>
               <p>Hybrid ML + statistical DDoS detector — simulated mitigation</p>
